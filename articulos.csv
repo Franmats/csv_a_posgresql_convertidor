@@ -1,0 +1,6 @@
+codigo,nombre,codigo_barras,precio,stock,precio_descuento,imagen,descripcion
+1001,Coca Cola 500ml,7790895000115,1500.00,50,,, 
+1002,Agua Mineral 1L,7790315001234,800.00,100,720.00,,
+1003,Galletas Oreo,7622210449283,1200.00,75,1000.00,,
+1004,Jugo Cepita Naranja,7790315004567,950.00,60,,,
+1005,Cerveza Quilmes 1L,7790290001234,2200.00,40,1000.00,,
