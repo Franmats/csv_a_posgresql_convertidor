@@ -29,7 +29,19 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
     `);
 
     const copyStream = client.query(
-      copyFrom(`COPY tmp_articulos FROM STDIN WITH (FORMAT csv, HEADER true)`)
+      copyFrom(`COPY tmp_articulos (
+    tipo,
+    codigo,
+    nombre,
+    descripcion,
+    imagen,
+    sku,
+    precio,
+    precio_descuento,
+    stock
+)
+FROM STDIN
+WITH (FORMAT csv, HEADER true);`)
     );
 
     const fileStream = fs.createReadStream(filePath);
