@@ -1,0 +1,2 @@
+numero_pedido,estado,medio_pago,nombre,email,dni,telefono,direccion,ciudad,provincia,codigo_postal,descuento,total
+130,processing,Contra reembolso,Franco Cuenca,francomats424@gmail.com,,2616263081,Falucho,Luján de Cuyo,M,5507,0.00,7000.00

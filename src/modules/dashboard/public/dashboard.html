@@ -1,0 +1,623 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Dashboard — Sistema de Sync</title>
+<style>
+  :root {
+    --bg: #0e1117;
+    --bg2: #161b27;
+    --bg3: #1e2536;
+    --border: #2a3350;
+    --border2: #3a4a70;
+    --text: #e2e8f0;
+    --muted: #7b8db0;
+    --dim: #4a5680;
+    --green: #4ade80;
+    --green-bg: #0d2e1a;
+    --green-dim: #166534;
+    --blue: #60a5fa;
+    --blue-bg: #0d1f40;
+    --blue-dim: #1e40af;
+    --amber: #fbbf24;
+    --amber-bg: #2d1b00;
+    --amber-dim: #92400e;
+    --coral: #fb7185;
+    --coral-bg: #2d0a14;
+    --coral-dim: #9f1239;
+    --font: 'Inter', system-ui, sans-serif;
+    --mono: 'Fira Code', 'Consolas', monospace;
+    --radius: 8px;
+    --radius-lg: 12px;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: var(--font); font-size: 14px; min-height: 100vh; }
+
+  /* ── LOGIN ── */
+  #login-view {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .login-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 40px;
+    width: 360px;
+  }
+  .login-card h1 { font-size: 20px; font-weight: 600; margin-bottom: 6px; }
+  .login-card p { font-size: 13px; color: var(--muted); margin-bottom: 28px; }
+  .form-group { margin-bottom: 16px; }
+  .form-group label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; font-weight: 500; text-transform: uppercase; letter-spacing: .05em; }
+  .form-group input {
+    width: 100%;
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    color: var(--text);
+    font-size: 14px;
+    font-family: var(--font);
+    outline: none;
+    transition: border-color .15s;
+  }
+  .form-group input:focus { border-color: var(--blue); }
+  .btn-primary {
+    width: 100%;
+    background: var(--blue);
+    color: #0a0f1e;
+    border: none;
+    border-radius: var(--radius);
+    padding: 11px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: opacity .15s;
+  }
+  .btn-primary:hover { opacity: .85; }
+  .login-error { color: var(--coral); font-size: 12px; margin-top: 10px; text-align: center; display: none; }
+
+  /* ── DASHBOARD ── */
+  #dashboard-view { display: none; }
+
+  .topbar {
+    background: var(--bg2);
+    border-bottom: 1px solid var(--border);
+    padding: 14px 32px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .topbar-left { display: flex; align-items: center; gap: 12px; }
+  .topbar h1 { font-size: 15px; font-weight: 600; }
+  .topbar-badge {
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 99px;
+    background: var(--green-bg);
+    border: 1px solid var(--green-dim);
+    color: var(--green);
+  }
+  .topbar-right { display: flex; align-items: center; gap: 12px; }
+  .last-update { font-size: 12px; color: var(--muted); }
+  .btn-refresh {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--font);
+    transition: border-color .15s;
+  }
+  .btn-refresh:hover { border-color: var(--blue); }
+  .btn-logout {
+    background: transparent;
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--muted);
+    padding: 6px 14px;
+    font-size: 13px;
+    cursor: pointer;
+    font-family: var(--font);
+  }
+  .btn-logout:hover { color: var(--coral); border-color: var(--coral-dim); }
+
+  .tabs {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid var(--border);
+    background: var(--bg2);
+    padding: 0 32px;
+  }
+  .tab {
+    padding: 12px 20px;
+    font-size: 13px;
+    color: var(--muted);
+    cursor: pointer;
+    border-bottom: 2px solid transparent;
+    border-top: none; border-left: none; border-right: none;
+    background: none;
+    font-family: var(--font);
+    transition: all .15s;
+    white-space: nowrap;
+  }
+  .tab:hover { color: var(--text); }
+  .tab.active { color: var(--blue); border-bottom-color: var(--blue); }
+
+  .content { padding: 28px 32px; }
+  .panel { display: none; }
+  .panel.active { display: block; }
+
+  /* ── CARDS ── */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--muted);
+    margin-bottom: 16px;
+  }
+
+  .tienda-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 16px; margin-bottom: 32px; }
+
+  .tienda-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+  }
+  .tienda-card-header {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 1px solid var(--border);
+  }
+  .tienda-card-name { font-size: 14px; font-weight: 600; }
+  .tienda-card-body { padding: 14px 16px; display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+  .metric { display: flex; flex-direction: column; gap: 2px; }
+  .metric-value { font-size: 22px; font-weight: 700; font-family: var(--mono); }
+  .metric-label { font-size: 11px; color: var(--muted); }
+  .metric-value.green { color: var(--green); }
+  .metric-value.amber { color: var(--amber); }
+  .metric-value.coral { color: var(--coral); }
+  .metric-value.blue { color: var(--blue); }
+
+  .tienda-card-footer {
+    padding: 10px 16px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    font-family: var(--mono);
+  }
+
+  /* ── BADGE ── */
+  .badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 11px;
+    font-family: var(--mono);
+    padding: 2px 8px;
+    border-radius: 99px;
+    border: 1px solid;
+  }
+  .badge.green { color: var(--green); border-color: var(--green-dim); background: var(--green-bg); }
+  .badge.amber { color: var(--amber); border-color: var(--amber-dim); background: var(--amber-bg); }
+  .badge.coral { color: var(--coral); border-color: var(--coral-dim); background: var(--coral-bg); }
+  .badge.blue { color: var(--blue); border-color: var(--blue-dim); background: var(--blue-bg); }
+  .badge.gray { color: var(--muted); border-color: var(--border2); background: var(--bg3); }
+
+  /* ── TABLE ── */
+  .table-wrap {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+    margin-bottom: 24px;
+  }
+  .table-header {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .table-title { font-size: 13px; font-weight: 600; }
+  .table-count { font-size: 12px; color: var(--muted); font-family: var(--mono); }
+  table { width: 100%; border-collapse: collapse; }
+  th {
+    text-align: left;
+    padding: 10px 16px;
+    background: var(--bg3);
+    color: var(--muted);
+    font-size: 11px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+    border-bottom: 1px solid var(--border);
+  }
+  td {
+    padding: 10px 16px;
+    border-bottom: 1px solid var(--border);
+    font-size: 13px;
+    font-family: var(--mono);
+    color: #a9b9d8;
+  }
+  td.name { font-family: var(--font); color: var(--text); font-weight: 500; }
+  tr:last-child td { border-bottom: none; }
+  tr:hover td { background: var(--bg3); }
+
+  .error-msg {
+    font-size: 11px;
+    color: var(--coral);
+    max-width: 300px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  /* ── EMPTY STATE ── */
+  .empty {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* ── LOADING ── */
+  .loading {
+    padding: 40px;
+    text-align: center;
+    color: var(--muted);
+    font-size: 13px;
+  }
+
+  /* ── WORKER STATUS ── */
+  .worker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 12px; margin-bottom: 28px; }
+  .worker-card {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .worker-name { font-size: 13px; font-weight: 500; }
+  .worker-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .pulse {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--green);
+    box-shadow: 0 0 0 0 rgba(74, 222, 128, .4);
+    animation: pulse 2s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(74,222,128,.4); }
+    70% { box-shadow: 0 0 0 8px rgba(74,222,128,0); }
+    100% { box-shadow: 0 0 0 0 rgba(74,222,128,0); }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═══ LOGIN ═══ -->
+<div id="login-view">
+  <div class="login-card">
+    <h1>Sistema de Sync</h1>
+    <p>Ingresá tu contraseña para acceder al dashboard</p>
+    <div class="form-group">
+      <label>Contraseña</label>
+      <input type="password" id="password-input" placeholder="••••••••" onkeydown="if(event.key==='Enter') doLogin()">
+    </div>
+    <button class="btn-primary" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error">Contraseña incorrecta</div>
+  </div>
+</div>
+
+<!-- ═══ DASHBOARD ═══ -->
+<div id="dashboard-view">
+
+  <div class="topbar">
+    <div class="topbar-left">
+      <h1>Sistema de Sync</h1>
+      <span class="topbar-badge" id="system-status">● activo</span>
+    </div>
+    <div class="topbar-right">
+      <span class="last-update" id="last-update">Actualizando...</span>
+      <button class="btn-refresh" onclick="loadAll()">↻ Actualizar</button>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="tabs">
+    <button class="tab active" onclick="showTab('resumen', this)">Resumen</button>
+    <button class="tab" onclick="showTab('errores', this)">Errores <span id="errores-count"></span></button>
+    <button class="tab" onclick="showTab('pedidos', this)">Pedidos</button>
+  </div>
+
+  <div class="content">
+
+    <!-- ═══ RESUMEN ═══ -->
+    <div class="panel active" id="tab-resumen">
+      <p class="section-title">Workers activos</p>
+      <div class="worker-grid" id="worker-grid">
+        <div class="loading">Cargando...</div>
+      </div>
+
+      <p class="section-title">Estado por tienda</p>
+      <div class="tienda-grid" id="tienda-grid">
+        <div class="loading">Cargando...</div>
+      </div>
+    </div>
+
+    <!-- ═══ ERRORES ═══ -->
+    <div class="panel" id="tab-errores">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Productos con error de sync</span>
+          <span class="table-count" id="errores-table-count">—</span>
+        </div>
+        <div id="errores-table-body">
+          <div class="loading">Cargando...</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ PEDIDOS ═══ -->
+    <div class="panel" id="tab-pedidos">
+      <div class="table-wrap">
+        <div class="table-header">
+          <span class="table-title">Últimos pedidos recibidos</span>
+          <span class="table-count" id="pedidos-table-count">—</span>
+        </div>
+        <div id="pedidos-table-body">
+          <div class="loading">Cargando...</div>
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+let token = localStorage.getItem('dashboard_token');
+let refreshInterval = null;
+
+// ── AUTH ──────────────────────────────────────────────────────
+async function doLogin() {
+  const password = document.getElementById('password-input').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+
+  try {
+    const res = await fetch('/dashboard/auth/login', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ password })
+    });
+
+    if (!res.ok) {
+      errEl.style.display = 'block';
+      return;
+    }
+
+    const data = await res.json();
+    token = data.token;
+    localStorage.setItem('dashboard_token', token);
+    showDashboard();
+  } catch {
+    errEl.style.display = 'block';
+  }
+}
+
+function doLogout() {
+  localStorage.removeItem('dashboard_token');
+  token = null;
+  clearInterval(refreshInterval);
+  document.getElementById('login-view').style.display = 'flex';
+  document.getElementById('dashboard-view').style.display = 'none';
+}
+
+function showDashboard() {
+  document.getElementById('login-view').style.display = 'none';
+  document.getElementById('dashboard-view').style.display = 'block';
+  loadAll();
+  refreshInterval = setInterval(loadAll, 30000); // auto-refresh cada 30s
+}
+
+// ── API ───────────────────────────────────────────────────────
+async function apiFetch(url) {
+  const res = await fetch(url, {
+    headers: { Authorization: `Bearer ${token}` }
+  });
+
+  if (res.status === 401) {
+    doLogout();
+    return null;
+  }
+
+  return res.json();
+}
+
+async function loadAll() {
+  await Promise.all([loadStatus(), loadErrores(), loadPedidos()]);
+  document.getElementById('last-update').textContent =
+    'Actualizado: ' + new Date().toLocaleTimeString('es-AR');
+}
+
+// ── STATUS ────────────────────────────────────────────────────
+async function loadStatus() {
+  const data = await apiFetch('/dashboard/api/status');
+  if (!data) return;
+
+  const tiendas = data.tiendas;
+
+  // Workers
+  const workerGrid = document.getElementById('worker-grid');
+  workerGrid.innerHTML = tiendas.map(t => `
+    <div class="worker-card">
+      <div>
+        <div class="worker-name">${t.nombre}</div>
+        <div class="worker-sub">Sync worker · cada 60s</div>
+      </div>
+      <div class="pulse"></div>
+    </div>
+  `).join('');
+
+  // Tiendas
+  const tiendaGrid = document.getElementById('tienda-grid');
+  tiendaGrid.innerHTML = tiendas.map(t => `
+    <div class="tienda-card">
+      <div class="tienda-card-header">
+        <span class="tienda-card-name">${t.nombre}</span>
+        <span class="badge ${t.activo ? 'green' : 'gray'}">${t.activo ? '● activa' : '○ inactiva'}</span>
+      </div>
+      <div class="tienda-card-body">
+        <div class="metric">
+          <span class="metric-value green">${t.productos_activos ?? 0}</span>
+          <span class="metric-label">Productos activos</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value ${t.productos_error > 0 ? 'coral' : 'green'}">${t.productos_error ?? 0}</span>
+          <span class="metric-label">Errores sync</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value blue">${t.total_pedidos ?? 0}</span>
+          <span class="metric-label">Total pedidos</span>
+        </div>
+        <div class="metric">
+          <span class="metric-value ${t.pedidos_sin_facturar > 0 ? 'amber' : 'green'}">${t.pedidos_sin_facturar ?? 0}</span>
+          <span class="metric-label">Sin facturar</span>
+        </div>
+      </div>
+      <div class="tienda-card-footer">
+        Último sync: ${t.ultimo_sync ? new Date(t.ultimo_sync).toLocaleString('es-AR') : 'Nunca'}
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── ERRORES ───────────────────────────────────────────────────
+async function loadErrores() {
+  const data = await apiFetch('/dashboard/api/errores');
+  if (!data) return;
+
+  const errores = data.errores;
+  const count = errores.length;
+
+  document.getElementById('errores-count').textContent = count > 0 ? `(${count})` : '';
+  document.getElementById('errores-table-count').textContent = `${count} errores`;
+
+  const body = document.getElementById('errores-table-body');
+
+  if (count === 0) {
+    body.innerHTML = '<div class="empty">✓ Sin errores de sincronización</div>';
+    return;
+  }
+
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Tienda</th>
+          <th>Código</th>
+          <th>SKU / Variante</th>
+          <th>Tipo</th>
+          <th>Error</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${errores.map(e => `
+          <tr>
+            <td>${e.tienda}</td>
+            <td>${e.producto_codigo}</td>
+            <td>${e.sku ?? '—'}</td>
+            <td><span class="badge ${e.tipo === 'simple' ? 'blue' : 'amber'}">${e.tipo}</span></td>
+            <td><span class="error-msg" title="${e.error_message}">${e.error_message ?? '—'}</span></td>
+            <td>${new Date(e.updated_at).toLocaleString('es-AR')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ── PEDIDOS ───────────────────────────────────────────────────
+async function loadPedidos() {
+  const data = await apiFetch('/dashboard/api/pedidos');
+  if (!data) return;
+
+  const pedidos = data.pedidos;
+  const count = pedidos.length;
+
+  document.getElementById('pedidos-table-count').textContent = `${count} pedidos`;
+
+  const body = document.getElementById('pedidos-table-body');
+
+  if (count === 0) {
+    body.innerHTML = '<div class="empty">Sin pedidos recibidos aún</div>';
+    return;
+  }
+
+  body.innerHTML = `
+    <table>
+      <thead>
+        <tr>
+          <th>Tienda</th>
+          <th>N° Pedido</th>
+          <th>Email</th>
+          <th>DNI</th>
+          <th>Total</th>
+          <th>Medio de pago</th>
+          <th>Estado</th>
+          <th>Facturado</th>
+          <th>Fecha</th>
+        </tr>
+      </thead>
+      <tbody>
+        ${pedidos.map(p => `
+          <tr>
+            <td>${p.tienda}</td>
+            <td>${p.woocommerce_id}</td>
+            <td class="name">${p.customer_email ?? '—'}</td>
+            <td>${p.customer_dni ?? '—'}</td>
+            <td>$${Number(p.total).toLocaleString('es-AR')}</td>
+            <td>${p.payment_method ?? '—'}</td>
+            <td><span class="badge ${p.status === 'completed' ? 'green' : p.status === 'processing' ? 'blue' : 'amber'}">${p.status}</span></td>
+            <td><span class="badge ${p.invoiced ? 'green' : 'amber'}">${p.invoiced ? 'sí' : 'no'}</span></td>
+            <td>${new Date(p.created_at).toLocaleString('es-AR')}</td>
+          </tr>
+        `).join('')}
+      </tbody>
+    </table>
+  `;
+}
+
+// ── TABS ──────────────────────────────────────────────────────
+function showTab(id, btn) {
+  document.querySelectorAll('.panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+  document.getElementById('tab-' + id).classList.add('active');
+  btn.classList.add('active');
+}
+
+// ── INIT ──────────────────────────────────────────────────────
+if (token) {
+  showDashboard();
+} else {
+  document.getElementById('login-view').style.display = 'flex';
+}
+</script>
+</body>
+</html>
