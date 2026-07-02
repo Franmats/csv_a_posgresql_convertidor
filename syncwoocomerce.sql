@@ -2,12 +2,12 @@
 -- PostgreSQL database dump
 --
 
-\restrict cDeEPMGSuJitgXIGWEwi5CDKMCqZmnILXzf66YQXNkwNEHi8JU78ekm5cikdmnX
+\restrict 9emRTbNS7clkkxA2z8qdXW5BatUgao6qhj2xCE2ggnocbUlcSkmyz6u0TzrU4kw
 
 -- Dumped from database version 17.6
 -- Dumped by pg_dump version 17.6
 
--- Started on 2026-06-30 21:38:59
+-- Started on 2026-07-02 10:21:14
 
 SET statement_timeout = 0;
 SET lock_timeout = 0;
@@ -22,7 +22,7 @@ SET client_min_messages = warning;
 SET row_security = off;
 
 --
--- TOC entry 270 (class 1255 OID 57443)
+-- TOC entry 276 (class 1255 OID 57443)
 -- Name: update_timestamp_productos(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -30,12 +30,12 @@ CREATE FUNCTION public.update_timestamp_productos() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
 BEGIN
-  IF
-    NEW.nombre        IS DISTINCT FROM OLD.nombre OR
-    NEW.descripcion   IS DISTINCT FROM OLD.descripcion OR
-    NEW.imagen        IS DISTINCT FROM OLD.imagen OR
-    NEW.tipo          IS DISTINCT FROM OLD.tipo OR
-    NEW.activo        IS DISTINCT FROM OLD.activo
+  IF NEW.nombre        IS DISTINCT FROM OLD.nombre OR
+     NEW.descripcion   IS DISTINCT FROM OLD.descripcion OR
+     NEW.imagen        IS DISTINCT FROM OLD.imagen OR
+     NEW.tipo          IS DISTINCT FROM OLD.tipo OR
+     NEW.rubro         IS DISTINCT FROM OLD.rubro OR
+     NEW.activo        IS DISTINCT FROM OLD.activo
   THEN
     NEW.updated_at = NOW();
   END IF;
@@ -47,7 +47,7 @@ $$;
 ALTER FUNCTION public.update_timestamp_productos() OWNER TO postgres;
 
 --
--- TOC entry 269 (class 1255 OID 57470)
+-- TOC entry 275 (class 1255 OID 57470)
 -- Name: update_timestamp_variantes(); Type: FUNCTION; Schema: public; Owner: postgres
 --
 
@@ -77,7 +77,7 @@ SET default_tablespace = '';
 SET default_table_access_method = heap;
 
 --
--- TOC entry 264 (class 1259 OID 57764)
+-- TOC entry 268 (class 1259 OID 57764)
 -- Name: producto_variantes; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -99,7 +99,7 @@ CREATE TABLE public.producto_variantes (
 ALTER TABLE public.producto_variantes OWNER TO postgres;
 
 --
--- TOC entry 263 (class 1259 OID 57763)
+-- TOC entry 267 (class 1259 OID 57763)
 -- Name: producto_variantes_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -115,8 +115,8 @@ CREATE SEQUENCE public.producto_variantes_id_seq
 ALTER SEQUENCE public.producto_variantes_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5001 (class 0 OID 0)
--- Dependencies: 263
+-- TOC entry 5017 (class 0 OID 0)
+-- Dependencies: 267
 -- Name: producto_variantes_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -124,7 +124,7 @@ ALTER SEQUENCE public.producto_variantes_id_seq OWNED BY public.producto_variant
 
 
 --
--- TOC entry 262 (class 1259 OID 57744)
+-- TOC entry 266 (class 1259 OID 57744)
 -- Name: productos; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -137,14 +137,15 @@ CREATE TABLE public.productos (
     imagen character varying,
     tipo character varying DEFAULT 'simple'::character varying,
     activo boolean DEFAULT true,
-    updated_at timestamp without time zone DEFAULT now()
+    updated_at timestamp without time zone DEFAULT now(),
+    rubro character varying
 );
 
 
 ALTER TABLE public.productos OWNER TO postgres;
 
 --
--- TOC entry 261 (class 1259 OID 57743)
+-- TOC entry 265 (class 1259 OID 57743)
 -- Name: productos_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -160,8 +161,8 @@ CREATE SEQUENCE public.productos_id_seq
 ALTER SEQUENCE public.productos_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5002 (class 0 OID 0)
--- Dependencies: 261
+-- TOC entry 5018 (class 0 OID 0)
+-- Dependencies: 265
 -- Name: productos_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -169,7 +170,7 @@ ALTER SEQUENCE public.productos_id_seq OWNED BY public.productos.id;
 
 
 --
--- TOC entry 260 (class 1259 OID 57733)
+-- TOC entry 264 (class 1259 OID 57733)
 -- Name: tiendas; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -191,7 +192,7 @@ CREATE TABLE public.tiendas (
 ALTER TABLE public.tiendas OWNER TO postgres;
 
 --
--- TOC entry 259 (class 1259 OID 57732)
+-- TOC entry 263 (class 1259 OID 57732)
 -- Name: tiendas_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -207,8 +208,8 @@ CREATE SEQUENCE public.tiendas_id_seq
 ALTER SEQUENCE public.tiendas_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5003 (class 0 OID 0)
--- Dependencies: 259
+-- TOC entry 5019 (class 0 OID 0)
+-- Dependencies: 263
 -- Name: tiendas_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -216,7 +217,48 @@ ALTER SEQUENCE public.tiendas_id_seq OWNED BY public.tiendas.id;
 
 
 --
--- TOC entry 268 (class 1259 OID 57814)
+-- TOC entry 274 (class 1259 OID 58053)
+-- Name: woocommerce_categories; Type: TABLE; Schema: public; Owner: postgres
+--
+
+CREATE TABLE public.woocommerce_categories (
+    id integer NOT NULL,
+    tienda_id integer NOT NULL,
+    nombre character varying NOT NULL,
+    wc_category_id integer NOT NULL,
+    created_at timestamp without time zone DEFAULT now()
+);
+
+
+ALTER TABLE public.woocommerce_categories OWNER TO postgres;
+
+--
+-- TOC entry 273 (class 1259 OID 58052)
+-- Name: woocommerce_categories_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
+--
+
+CREATE SEQUENCE public.woocommerce_categories_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+
+ALTER SEQUENCE public.woocommerce_categories_id_seq OWNER TO postgres;
+
+--
+-- TOC entry 5020 (class 0 OID 0)
+-- Dependencies: 273
+-- Name: woocommerce_categories_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
+--
+
+ALTER SEQUENCE public.woocommerce_categories_id_seq OWNED BY public.woocommerce_categories.id;
+
+
+--
+-- TOC entry 272 (class 1259 OID 57814)
 -- Name: woocommerce_orders; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -238,7 +280,7 @@ CREATE TABLE public.woocommerce_orders (
 ALTER TABLE public.woocommerce_orders OWNER TO postgres;
 
 --
--- TOC entry 267 (class 1259 OID 57813)
+-- TOC entry 271 (class 1259 OID 57813)
 -- Name: woocommerce_orders_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -254,8 +296,8 @@ CREATE SEQUENCE public.woocommerce_orders_id_seq
 ALTER SEQUENCE public.woocommerce_orders_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5004 (class 0 OID 0)
--- Dependencies: 267
+-- TOC entry 5021 (class 0 OID 0)
+-- Dependencies: 271
 -- Name: woocommerce_orders_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -263,7 +305,7 @@ ALTER SEQUENCE public.woocommerce_orders_id_seq OWNED BY public.woocommerce_orde
 
 
 --
--- TOC entry 266 (class 1259 OID 57790)
+-- TOC entry 270 (class 1259 OID 57790)
 -- Name: woocommerce_products; Type: TABLE; Schema: public; Owner: postgres
 --
 
@@ -285,7 +327,7 @@ CREATE TABLE public.woocommerce_products (
 ALTER TABLE public.woocommerce_products OWNER TO postgres;
 
 --
--- TOC entry 265 (class 1259 OID 57789)
+-- TOC entry 269 (class 1259 OID 57789)
 -- Name: woocommerce_products_id_seq; Type: SEQUENCE; Schema: public; Owner: postgres
 --
 
@@ -301,8 +343,8 @@ CREATE SEQUENCE public.woocommerce_products_id_seq
 ALTER SEQUENCE public.woocommerce_products_id_seq OWNER TO postgres;
 
 --
--- TOC entry 5005 (class 0 OID 0)
--- Dependencies: 265
+-- TOC entry 5022 (class 0 OID 0)
+-- Dependencies: 269
 -- Name: woocommerce_products_id_seq; Type: SEQUENCE OWNED BY; Schema: public; Owner: postgres
 --
 
@@ -310,7 +352,7 @@ ALTER SEQUENCE public.woocommerce_products_id_seq OWNED BY public.woocommerce_pr
 
 
 --
--- TOC entry 4813 (class 2604 OID 57767)
+-- TOC entry 4822 (class 2604 OID 57767)
 -- Name: producto_variantes id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -318,7 +360,7 @@ ALTER TABLE ONLY public.producto_variantes ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 4809 (class 2604 OID 57747)
+-- TOC entry 4818 (class 2604 OID 57747)
 -- Name: productos id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -326,7 +368,7 @@ ALTER TABLE ONLY public.productos ALTER COLUMN id SET DEFAULT nextval('public.pr
 
 
 --
--- TOC entry 4806 (class 2604 OID 57736)
+-- TOC entry 4815 (class 2604 OID 57736)
 -- Name: tiendas id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -334,7 +376,15 @@ ALTER TABLE ONLY public.tiendas ALTER COLUMN id SET DEFAULT nextval('public.tien
 
 
 --
--- TOC entry 4822 (class 2604 OID 57817)
+-- TOC entry 4834 (class 2604 OID 58056)
+-- Name: woocommerce_categories id; Type: DEFAULT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.woocommerce_categories ALTER COLUMN id SET DEFAULT nextval('public.woocommerce_categories_id_seq'::regclass);
+
+
+--
+-- TOC entry 4831 (class 2604 OID 57817)
 -- Name: woocommerce_orders id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -342,7 +392,7 @@ ALTER TABLE ONLY public.woocommerce_orders ALTER COLUMN id SET DEFAULT nextval('
 
 
 --
--- TOC entry 4818 (class 2604 OID 57793)
+-- TOC entry 4827 (class 2604 OID 57793)
 -- Name: woocommerce_products id; Type: DEFAULT; Schema: public; Owner: postgres
 --
 
@@ -350,7 +400,7 @@ ALTER TABLE ONLY public.woocommerce_products ALTER COLUMN id SET DEFAULT nextval
 
 
 --
--- TOC entry 4835 (class 2606 OID 57775)
+-- TOC entry 4846 (class 2606 OID 57775)
 -- Name: producto_variantes producto_variantes_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -359,7 +409,7 @@ ALTER TABLE ONLY public.producto_variantes
 
 
 --
--- TOC entry 4828 (class 2606 OID 57754)
+-- TOC entry 4839 (class 2606 OID 57754)
 -- Name: productos productos_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -368,7 +418,7 @@ ALTER TABLE ONLY public.productos
 
 
 --
--- TOC entry 4830 (class 2606 OID 57756)
+-- TOC entry 4841 (class 2606 OID 57756)
 -- Name: productos productos_tienda_id_codigo_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -377,7 +427,7 @@ ALTER TABLE ONLY public.productos
 
 
 --
--- TOC entry 4826 (class 2606 OID 57742)
+-- TOC entry 4837 (class 2606 OID 57742)
 -- Name: tiendas tiendas_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -386,7 +436,25 @@ ALTER TABLE ONLY public.tiendas
 
 
 --
--- TOC entry 4841 (class 2606 OID 57823)
+-- TOC entry 4856 (class 2606 OID 58061)
+-- Name: woocommerce_categories woocommerce_categories_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.woocommerce_categories
+    ADD CONSTRAINT woocommerce_categories_pkey PRIMARY KEY (id);
+
+
+--
+-- TOC entry 4858 (class 2606 OID 58063)
+-- Name: woocommerce_categories woocommerce_categories_tienda_id_nombre_key; Type: CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.woocommerce_categories
+    ADD CONSTRAINT woocommerce_categories_tienda_id_nombre_key UNIQUE (tienda_id, nombre);
+
+
+--
+-- TOC entry 4852 (class 2606 OID 57823)
 -- Name: woocommerce_orders woocommerce_orders_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -395,7 +463,7 @@ ALTER TABLE ONLY public.woocommerce_orders
 
 
 --
--- TOC entry 4843 (class 2606 OID 57825)
+-- TOC entry 4854 (class 2606 OID 57825)
 -- Name: woocommerce_orders woocommerce_orders_tienda_id_woocommerce_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -404,7 +472,7 @@ ALTER TABLE ONLY public.woocommerce_orders
 
 
 --
--- TOC entry 4837 (class 2606 OID 57800)
+-- TOC entry 4848 (class 2606 OID 57800)
 -- Name: woocommerce_products woocommerce_products_pkey; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -413,7 +481,7 @@ ALTER TABLE ONLY public.woocommerce_products
 
 
 --
--- TOC entry 4839 (class 2606 OID 57802)
+-- TOC entry 4850 (class 2606 OID 57802)
 -- Name: woocommerce_products woocommerce_products_tienda_id_producto_codigo_variante_id_key; Type: CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -422,7 +490,7 @@ ALTER TABLE ONLY public.woocommerce_products
 
 
 --
--- TOC entry 4831 (class 1259 OID 57786)
+-- TOC entry 4842 (class 1259 OID 57786)
 -- Name: idx_variantes_con_sku; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -430,7 +498,7 @@ CREATE UNIQUE INDEX idx_variantes_con_sku ON public.producto_variantes USING btr
 
 
 --
--- TOC entry 4832 (class 1259 OID 57831)
+-- TOC entry 4843 (class 1259 OID 57831)
 -- Name: idx_variantes_producto_codigo; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -438,7 +506,7 @@ CREATE INDEX idx_variantes_producto_codigo ON public.producto_variantes USING bt
 
 
 --
--- TOC entry 4833 (class 1259 OID 57787)
+-- TOC entry 4844 (class 1259 OID 57787)
 -- Name: idx_variantes_sin_sku; Type: INDEX; Schema: public; Owner: postgres
 --
 
@@ -446,7 +514,7 @@ CREATE UNIQUE INDEX idx_variantes_sin_sku ON public.producto_variantes USING btr
 
 
 --
--- TOC entry 4850 (class 2620 OID 57788)
+-- TOC entry 4866 (class 2620 OID 57788)
 -- Name: producto_variantes producto_variantes_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -454,7 +522,7 @@ CREATE TRIGGER producto_variantes_updated_at BEFORE UPDATE ON public.producto_va
 
 
 --
--- TOC entry 4849 (class 2620 OID 57762)
+-- TOC entry 4865 (class 2620 OID 57762)
 -- Name: productos productos_updated_at; Type: TRIGGER; Schema: public; Owner: postgres
 --
 
@@ -462,7 +530,7 @@ CREATE TRIGGER productos_updated_at BEFORE UPDATE ON public.productos FOR EACH R
 
 
 --
--- TOC entry 4845 (class 2606 OID 57781)
+-- TOC entry 4860 (class 2606 OID 57781)
 -- Name: producto_variantes producto_variantes_tienda_id_producto_codigo_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -471,7 +539,7 @@ ALTER TABLE ONLY public.producto_variantes
 
 
 --
--- TOC entry 4844 (class 2606 OID 57757)
+-- TOC entry 4859 (class 2606 OID 57757)
 -- Name: productos productos_tienda_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -480,7 +548,16 @@ ALTER TABLE ONLY public.productos
 
 
 --
--- TOC entry 4848 (class 2606 OID 57826)
+-- TOC entry 4864 (class 2606 OID 58064)
+-- Name: woocommerce_categories woocommerce_categories_tienda_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
+--
+
+ALTER TABLE ONLY public.woocommerce_categories
+    ADD CONSTRAINT woocommerce_categories_tienda_id_fkey FOREIGN KEY (tienda_id) REFERENCES public.tiendas(id);
+
+
+--
+-- TOC entry 4863 (class 2606 OID 57826)
 -- Name: woocommerce_orders woocommerce_orders_tienda_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -489,7 +566,7 @@ ALTER TABLE ONLY public.woocommerce_orders
 
 
 --
--- TOC entry 4846 (class 2606 OID 57803)
+-- TOC entry 4861 (class 2606 OID 57803)
 -- Name: woocommerce_products woocommerce_products_tienda_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -498,7 +575,7 @@ ALTER TABLE ONLY public.woocommerce_products
 
 
 --
--- TOC entry 4847 (class 2606 OID 57808)
+-- TOC entry 4862 (class 2606 OID 57808)
 -- Name: woocommerce_products woocommerce_products_variante_id_fkey; Type: FK CONSTRAINT; Schema: public; Owner: postgres
 --
 
@@ -506,11 +583,11 @@ ALTER TABLE ONLY public.woocommerce_products
     ADD CONSTRAINT woocommerce_products_variante_id_fkey FOREIGN KEY (variante_id) REFERENCES public.producto_variantes(id);
 
 
--- Completed on 2026-06-30 21:38:59
+-- Completed on 2026-07-02 10:21:14
 
 --
 -- PostgreSQL database dump complete
 --
 
-\unrestrict cDeEPMGSuJitgXIGWEwi5CDKMCqZmnILXzf66YQXNkwNEHi8JU78ekm5cikdmnX
+\unrestrict 9emRTbNS7clkkxA2z8qdXW5BatUgao6qhj2xCE2ggnocbUlcSkmyz6u0TzrU4kw
 

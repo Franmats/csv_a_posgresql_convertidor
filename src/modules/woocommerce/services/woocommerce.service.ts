@@ -22,6 +22,7 @@ export async function createSimpleProduct(tienda: Tienda, data: {
   stock: number;
   sku: string | null;
   codigo_barras: string | null;
+  category_id: number | null;
 }): Promise<{ woocommerce_id: number }> {
   const res = await fetch(`${getBaseUrl(tienda)}/products`, {
     method: 'POST',
@@ -36,25 +37,38 @@ export async function createSimpleProduct(tienda: Tienda, data: {
       sale_price: data.precio_descuento?.toString() ?? '',
       manage_stock: true,
       stock_quantity: data.stock,
+      ...(data.category_id ? { categories: [{ id: data.category_id }] } : {}),
       ...(data.imagen ? { images: [{ src: data.imagen }] } : {}),
     }),
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`WC createSimpleProduct error: ${res.status} - ${err}`);
+    const errText = await res.text();
+
+    // SKU duplicado — el producto ya existe, recuperar su ID
+    if (res.status === 400) {
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.code === 'product_invalid_sku' && errJson.data?.resource_id) {
+          console.log(`[WC] Producto ${data.codigo} ya existe en WC con ID ${errJson.data.resource_id}, recuperando mapeo...`);
+          return { woocommerce_id: errJson.data.resource_id };
+        }
+      } catch {}
+    }
+
+    throw new Error(`WC createSimpleProduct error: ${res.status} - ${errText}`);
   }
 
   const product: WCProduct = await res.json();
   return { woocommerce_id: product.id };
 }
-
 export async function updateSimpleProduct(tienda: Tienda,
   woocommerce_id: number,
   data: {
     precio: number;
     precio_descuento: number | null;
     stock: number;
+    category_id: number | null;  // ← nuevo
   }
 ): Promise<void> {
   const res = await fetch(`${getBaseUrl(tienda)}/products/${woocommerce_id}`, {
@@ -64,6 +78,7 @@ export async function updateSimpleProduct(tienda: Tienda,
       regular_price: data.precio.toString(),
       sale_price: data.precio_descuento?.toString() ?? '',
       stock_quantity: data.stock,
+      ...(data.category_id ? { categories: [{ id: data.category_id }] } : {}),  // ← nuevo
     }),
   });
 
@@ -81,12 +96,10 @@ export async function createVariableProduct(tienda: Tienda, data: {
   descripcion: string | null;
   imagen: string | null;
   atributos: Record<string, string[]>;
+  category_id: number | null;
 }): Promise<{ woocommerce_id: number }> {
   const attributes = Object.entries(data.atributos).map(([name, options]) => ({
-    name,
-    options,
-    variation: true,
-    visible: true,
+    name, options, variation: true, visible: true,
   }));
 
   const res = await fetch(`${getBaseUrl(tienda)}/products`, {
@@ -99,13 +112,26 @@ export async function createVariableProduct(tienda: Tienda, data: {
       description: data.descripcion ?? '',
       sku: data.codigo,
       attributes,
+      ...(data.category_id ? { categories: [{ id: data.category_id }] } : {}),
       ...(data.imagen ? { images: [{ src: data.imagen }] } : {}),
     }),
   });
 
   if (!res.ok) {
-    const err = await res.text();
-    throw new Error(`WC createVariableProduct error: ${res.status} - ${err}`);
+    const errText = await res.text();
+
+    // SKU duplicado — recuperar ID existente
+    if (res.status === 400) {
+      try {
+        const errJson = JSON.parse(errText);
+        if (errJson.code === 'product_invalid_sku' && errJson.data?.resource_id) {
+          console.log(`[WC] Producto variable ${data.codigo} ya existe en WC con ID ${errJson.data.resource_id}, recuperando mapeo...`);
+          return { woocommerce_id: errJson.data.resource_id };
+        }
+      } catch {}
+    }
+
+    throw new Error(`WC createVariableProduct error: ${res.status} - ${errText}`);
   }
 
   const product: WCProduct = await res.json();
@@ -214,4 +240,38 @@ export async function getOrder(tienda: Tienda, order_id: number): Promise<WCOrde
   }
 
   return res.json();
+}
+
+// ─── Categorías ───────────────────────────────────────────────
+
+export async function getCategoryByName(tienda: Tienda, nombre: string): Promise<number | null> {
+  const res = await fetch(
+    `${getBaseUrl(tienda)}/products/categories?search=${encodeURIComponent(nombre)}&per_page=10`,
+    { headers: getHeaders(tienda) }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WC getCategoryByName error: ${res.status} - ${err}`);
+  }
+
+  const categories = await res.json();
+  const match = categories.find((c: any) => c.name.toLowerCase() === nombre.toLowerCase());
+  return match ? match.id : null;
+}
+
+export async function createCategory(tienda: Tienda, nombre: string): Promise<number> {
+  const res = await fetch(`${getBaseUrl(tienda)}/products/categories`, {
+    method: 'POST',
+    headers: getHeaders(tienda),
+    body: JSON.stringify({ name: nombre }),
+  });
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WC createCategory error: ${res.status} - ${err}`);
+  }
+
+  const category = await res.json();
+  return category.id;
 }

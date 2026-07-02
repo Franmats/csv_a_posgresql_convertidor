@@ -9,4 +9,5 @@ export interface Tienda {
   pedidos_dir: string;
   images_dir: string;
   activo: boolean;
+  rubro: string | null;
 }

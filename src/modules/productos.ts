@@ -19,29 +19,18 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
         codigo           TEXT,
         nombre           TEXT,
         descripcion      TEXT,
-        imagen           TEXT,
-        sku              TEXT,
         codigo_barras    TEXT,
+        sku              TEXT,
         precio           TEXT,
         precio_descuento TEXT,
-        stock            TEXT
+        stock            TEXT,
+        rubro            TEXT
       ) ON COMMIT DROP
     `);
 
+    // COPY sin HEADER porque el CSV no tiene encabezado
     const copyStream = client.query(
-      copyFrom(`COPY tmp_articulos (
-    tipo,
-    codigo,
-    nombre,
-    descripcion,
-    imagen,
-    sku,
-    precio,
-    precio_descuento,
-    stock
-)
-FROM STDIN
-WITH (FORMAT csv, HEADER true);`)
+      copyFrom(`COPY tmp_articulos FROM STDIN WITH (FORMAT csv)`)
     );
 
     const fileStream = fs.createReadStream(filePath);
@@ -53,26 +42,26 @@ WITH (FORMAT csv, HEADER true);`)
 
     // 1. Upsert productos base
     await client.query(`
-      INSERT INTO productos (tienda_id, codigo, nombre, descripcion, imagen, tipo, activo)
+      INSERT INTO productos (tienda_id, codigo, nombre, descripcion, imagen, tipo, rubro, activo)
       SELECT $1, codigo, nombre,
         NULLIF(descripcion, ''),
-        NULLIF(imagen, ''),
-        tipo, TRUE
+        NULL,
+        LOWER(tipo),
+        NULLIF(rubro, ''),
+        TRUE
       FROM tmp_articulos
-      WHERE tipo IN ('simple', 'variable')
+      WHERE LOWER(tipo) IN ('simple', 'variable')
       ON CONFLICT (tienda_id, codigo) DO UPDATE SET
         nombre      = EXCLUDED.nombre,
         descripcion = EXCLUDED.descripcion,
-        imagen      = EXCLUDED.imagen,
         tipo        = EXCLUDED.tipo,
+        rubro       = EXCLUDED.rubro,
         activo      = TRUE,
         updated_at  = CASE
           WHEN
-            productos.nombre        IS DISTINCT FROM EXCLUDED.nombre OR
-            productos.descripcion   IS DISTINCT FROM EXCLUDED.descripcion OR
-            productos.imagen        IS DISTINCT FROM EXCLUDED.imagen OR
-            productos.tipo          IS DISTINCT FROM EXCLUDED.tipo OR
-            productos.activo        IS DISTINCT FROM TRUE
+            productos.nombre  IS DISTINCT FROM EXCLUDED.nombre OR
+            productos.rubro   IS DISTINCT FROM EXCLUDED.rubro OR
+            productos.activo  IS DISTINCT FROM TRUE
           THEN NOW()
           ELSE productos.updated_at
         END
@@ -84,7 +73,7 @@ WITH (FORMAT csv, HEADER true);`)
       WHERE tienda_id = $1
         AND codigo NOT IN (
           SELECT codigo FROM tmp_articulos
-          WHERE tipo IN ('simple', 'variable')
+          WHERE LOWER(tipo) IN ('simple', 'variable')
         )
         AND activo = TRUE
     `, [tienda.id]);
@@ -111,11 +100,11 @@ WITH (FORMAT csv, HEADER true);`)
         NULLIF(codigo_barras, ''),
         '{}'::jsonb,
         precio::numeric,
-        NULLIF(precio_descuento, '')::numeric,
+        CASE WHEN precio_descuento = precio THEN NULL ELSE NULLIF(precio_descuento, '')::numeric END,
         stock::integer,
         TRUE
       FROM tmp_articulos
-      WHERE tipo = 'simple'
+      WHERE LOWER(tipo) = 'simple'
         AND precio != ''
         AND stock != ''
       ON CONFLICT (tienda_id, producto_codigo, sku) WHERE sku IS NOT NULL DO UPDATE SET
@@ -129,7 +118,6 @@ WITH (FORMAT csv, HEADER true);`)
             producto_variantes.precio           IS DISTINCT FROM EXCLUDED.precio OR
             producto_variantes.precio_descuento IS DISTINCT FROM EXCLUDED.precio_descuento OR
             producto_variantes.stock            IS DISTINCT FROM EXCLUDED.stock OR
-            producto_variantes.codigo_barras    IS DISTINCT FROM EXCLUDED.codigo_barras OR
             producto_variantes.activo           IS DISTINCT FROM TRUE
           THEN NOW()
           ELSE producto_variantes.updated_at

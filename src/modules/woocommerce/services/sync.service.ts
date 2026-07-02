@@ -1,7 +1,10 @@
 import fs from 'fs';
 import { pool } from '../../../config/db';
 import { Tienda } from '../../../types/tienda';
+
 import {
+  getCategoryByName,
+  createCategory,
   createSimpleProduct,
   updateSimpleProduct,
   createVariableProduct,
@@ -19,6 +22,7 @@ interface ProductoRow {
   descripcion: string | null;
   imagen: string | null;
   tipo: string;
+  rubro: string | null;
   activo: boolean;
 }
 
@@ -34,9 +38,9 @@ interface VarianteRow {
   stock: number;
   activo: boolean;
 }
-// Agregar al inicio del archivo
+
 const MAX_RETRIES = 3;
-const RETRY_DELAYS = [5000, 15000, 30000]; // backoff exponencial en ms
+const RETRY_DELAYS = [5000, 15000, 30000];
 
 async function withRetry<T>(
   fn: () => Promise<T>,
@@ -51,12 +55,8 @@ async function withRetry<T>(
     } catch (err) {
       lastError = err instanceof Error ? err : new Error(String(err));
 
-      // 404 — recurso no existe en WC, no reintentar
-      if (lastError.message.includes('404')) {
-        throw lastError;
-      }
+      if (lastError.message.includes('404')) throw lastError;
 
-      // 429 — rate limit, esperar con backoff exponencial
       if (lastError.message.includes('429')) {
         const delay = RETRY_DELAYS[attempt] ?? 30000;
         console.warn(`[WCSync][${tienda.nombre}] Rate limit en ${context}, esperando ${delay}ms...`);
@@ -64,7 +64,6 @@ async function withRetry<T>(
         continue;
       }
 
-      // Otros errores — reintentar con backoff
       if (attempt < MAX_RETRIES - 1) {
         const delay = RETRY_DELAYS[attempt];
         console.warn(`[WCSync][${tienda.nombre}] Error en ${context}, reintentando en ${delay}ms...`);
@@ -75,29 +74,57 @@ async function withRetry<T>(
 
   throw lastError;
 }
+
+async function resolveCategoryId(tienda: Tienda, rubro: string): Promise<number | null> {
+  if (!rubro) return null;
+
+  const { rows } = await pool.query(
+    'SELECT wc_category_id FROM woocommerce_categories WHERE tienda_id = $1 AND nombre = $2',
+    [tienda.id, rubro]
+  );
+
+  if (rows.length > 0) return rows[0].wc_category_id;
+
+  let wc_category_id = await getCategoryByName(tienda, rubro);
+
+  if (!wc_category_id) {
+    wc_category_id = await createCategory(tienda, rubro);
+    console.log(`[WCSync][${tienda.nombre}] Categoría "${rubro}" creada en WC con ID ${wc_category_id}.`);
+  }
+
+  await pool.query(
+    `INSERT INTO woocommerce_categories (tienda_id, nombre, wc_category_id)
+     VALUES ($1, $2, $3)
+     ON CONFLICT (tienda_id, nombre) DO NOTHING`,
+    [tienda.id, rubro, wc_category_id]
+  );
+
+  return wc_category_id;
+}
+
 export async function syncPendingProducts(tienda: Tienda): Promise<void> {
-const { rows } = await pool.query<ProductoRow>(`
-  SELECT DISTINCT p.*
-  FROM productos p
-  LEFT JOIN woocommerce_products wp ON wp.producto_codigo = p.codigo
-    AND wp.tienda_id = p.tienda_id
-    AND wp.variante_id IS NULL
-  LEFT JOIN producto_variantes pv ON pv.producto_codigo = p.codigo
-    AND pv.tienda_id = p.tienda_id
-    AND p.tipo = 'variable'    -- ← solo variantes de productos variables
-  LEFT JOIN woocommerce_products wpv ON wpv.variante_id = pv.id
-    AND wpv.tienda_id = p.tienda_id
-  WHERE p.tienda_id = $1
-    AND (
-      wp.producto_codigo IS NULL
-      OR p.updated_at > wp.last_synced_at
-      OR wp.sync_status = 'error'
-      OR (pv.id IS NOT NULL AND wpv.variante_id IS NULL)
-      OR (pv.id IS NOT NULL AND pv.updated_at > wpv.last_synced_at)
-      OR wpv.sync_status = 'error'
-    )
-  LIMIT 50
-`, [tienda.id]);
+  const { rows } = await pool.query<ProductoRow>(`
+    SELECT DISTINCT p.*
+    FROM productos p
+    LEFT JOIN woocommerce_products wp ON wp.producto_codigo = p.codigo
+      AND wp.tienda_id = p.tienda_id
+      AND wp.variante_id IS NULL
+    LEFT JOIN producto_variantes pv ON pv.producto_codigo = p.codigo
+      AND pv.tienda_id = p.tienda_id
+      AND p.tipo = 'variable'
+    LEFT JOIN woocommerce_products wpv ON wpv.variante_id = pv.id
+      AND wpv.tienda_id = p.tienda_id
+    WHERE p.tienda_id = $1
+      AND (
+        wp.producto_codigo IS NULL
+        OR p.updated_at > wp.last_synced_at
+        OR wp.sync_status = 'error'
+        OR (pv.id IS NOT NULL AND wpv.variante_id IS NULL)
+        OR (pv.id IS NOT NULL AND pv.updated_at > wpv.last_synced_at)
+        OR wpv.sync_status = 'error'
+      )
+    LIMIT 50
+  `, [tienda.id]);
 
   console.log(`[WCSync][${tienda.nombre}] ${rows.length} productos pendientes.`);
 
@@ -150,6 +177,10 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
     ? `${process.env.API_URL}/api/imagenes/${tienda.id}/${producto.codigo}.jpg`
     : null;
 
+  const categoryId = producto.rubro
+    ? await resolveCategoryId(tienda, producto.rubro)
+    : null;
+
   try {
     if (!existing[0] || existing[0].woocommerce_id === 0) {
       if (!producto.activo) return;
@@ -165,6 +196,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
           stock: variante.stock,
           sku: variante.sku,
           codigo_barras: variante.codigo_barras,
+          category_id: categoryId,
         }),
         `createSimpleProduct ${producto.codigo}`,
         tienda
@@ -176,7 +208,19 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
         VALUES ($1, $2, NULL, $3, 'ok', NOW())
       `, [tienda.id, producto.codigo, woocommerce_id]);
 
-      console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} creado en WC.`);
+      // Actualizar precio, stock y categoría por si el producto ya existía en WC
+      await withRetry(
+        () => updateSimpleProduct(tienda, woocommerce_id, {
+          precio: variante.precio,
+          precio_descuento: variante.precio_descuento,
+          stock: variante.stock,
+          category_id: categoryId,
+        }),
+        `updateSimpleProduct ${producto.codigo}`,
+        tienda
+      );
+
+      console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} creado/mapeado en WC.`);
 
     } else {
       try {
@@ -197,6 +241,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
               precio: variante.precio,
               precio_descuento: variante.precio_descuento,
               stock: variante.stock,
+              category_id: categoryId,
             }),
             `updateSimpleProduct ${producto.codigo}`,
             tienda
@@ -215,9 +260,8 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error desconocido';
 
-        // 404 — producto borrado manualmente en WC, limpiar mapeo para recrear
         if (message.includes('404')) {
-          console.warn(`[WCSync][${tienda.nombre}] Producto ${producto.codigo} no encontrado en WC, limpiando mapeo para recrear...`);
+          console.warn(`[WCSync][${tienda.nombre}] Producto ${producto.codigo} no encontrado en WC, limpiando mapeo...`);
           await pool.query(`
             DELETE FROM woocommerce_products
             WHERE tienda_id = $1 AND producto_codigo = $2
@@ -254,7 +298,6 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
     return;
   }
 
-  // Ver si el producto base ya existe en WC
   const { rows: existing } = await pool.query(`
     SELECT * FROM woocommerce_products
     WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id IS NULL
@@ -265,10 +308,13 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
     ? `${process.env.API_URL}/api/imagenes/${tienda.id}/${producto.codigo}.jpg`
     : null;
 
+  const categoryId = producto.rubro
+    ? await resolveCategoryId(tienda, producto.rubro)
+    : null;
+
   let woocommerce_id: number;
 
   if (!existing[0] || existing[0].woocommerce_id === 0) {
-    // Construir atributos únicos de todas las variantes
     const atributosMap: Record<string, Set<string>> = {};
     for (const v of variantes) {
       for (const [key, value] of Object.entries(v.atributos)) {
@@ -286,6 +332,7 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
       descripcion: producto.descripcion,
       imagen,
       atributos,
+      category_id: categoryId,
     });
 
     woocommerce_id = result.woocommerce_id;
@@ -297,6 +344,7 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
     `, [tienda.id, producto.codigo, woocommerce_id]);
 
     console.log(`[WCSync][${tienda.nombre}] Producto variable ${producto.codigo} creado en WC.`);
+
   } else {
     woocommerce_id = existing[0].woocommerce_id;
 
@@ -313,7 +361,6 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
     await activateProduct(tienda, woocommerce_id);
   }
 
-  // Sincronizar cada variante
   for (const variante of variantes) {
     await syncVariante(tienda, producto.codigo, woocommerce_id, variante);
   }
@@ -378,9 +425,8 @@ async function syncVariante(
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error desconocido';
 
-        // 404 — variante borrada manualmente en WC, limpiar mapeo para recrear
         if (message.includes('404')) {
-          console.warn(`[WCSync][${tienda.nombre}] Variante ${variante.sku} no encontrada en WC, limpiando mapeo para recrear...`);
+          console.warn(`[WCSync][${tienda.nombre}] Variante ${variante.sku} no encontrada en WC, limpiando mapeo...`);
           await pool.query(`
             DELETE FROM woocommerce_products
             WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id = $3
