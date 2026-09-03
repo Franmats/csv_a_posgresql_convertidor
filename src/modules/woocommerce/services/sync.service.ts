@@ -126,7 +126,7 @@ export async function syncPendingProducts(tienda: Tienda): Promise<void> {
     LIMIT 50
   `, [tienda.id]);
 
-  console.log(`[WCSync][${tienda.nombre}] ${rows.length} productos pendientes.`);
+  /* console.log(`[WCSync][${tienda.nombre}] ${rows.length} productos pendientes.`); */
 
   for (const producto of rows) {
     await syncProducto(tienda, producto);
@@ -220,7 +220,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
         tienda
       );
 
-      console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} creado/mapeado en WC.`);
+      /* console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} creado/mapeado en WC.`); */
 
     } else {
       try {
@@ -255,7 +255,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
           WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id IS NULL
         `, [tienda.id, producto.codigo]);
 
-        console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} actualizado en WC.`);
+       /*  console.log(`[WCSync][${tienda.nombre}] Producto simple ${producto.codigo} actualizado en WC.`); */
 
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error desconocido';
@@ -343,7 +343,7 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
       VALUES ($1, $2, NULL, $3, 'ok', NOW())
     `, [tienda.id, producto.codigo, woocommerce_id]);
 
-    console.log(`[WCSync][${tienda.nombre}] Producto variable ${producto.codigo} creado en WC.`);
+   /*  console.log(`[WCSync][${tienda.nombre}] Producto variable ${producto.codigo} creado en WC.`); */
 
   } else {
     woocommerce_id = existing[0].woocommerce_id;
@@ -399,7 +399,7 @@ async function syncVariante(
         VALUES ($1, $2, $3, $4, $5, 'ok', NOW())
       `, [tienda.id, producto_codigo, variante.id, woocommerce_id, wc_variation_id]);
 
-      console.log(`[WCSync][${tienda.nombre}] Variante ${variante.sku ?? variante.id} creada en WC.`);
+     /*  console.log(`[WCSync][${tienda.nombre}] Variante ${variante.sku ?? variante.id} creada en WC.`); */
 
     } else {
       try {
@@ -420,7 +420,7 @@ async function syncVariante(
           WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id = $3
         `, [tienda.id, producto_codigo, variante.id]);
 
-        console.log(`[WCSync][${tienda.nombre}] Variante ${variante.sku ?? variante.id} actualizada en WC.`);
+    /*     console.log(`[WCSync][${tienda.nombre}] Variante ${variante.sku ?? variante.id} actualizada en WC.`); */
 
       } catch (err) {
         const message = err instanceof Error ? err.message : 'Error desconocido';

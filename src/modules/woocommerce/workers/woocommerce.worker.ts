@@ -13,9 +13,8 @@ async function tick(tienda: Tienda): Promise<void> {
   runningMap.set(tienda.id, true);
 
   try {
-    console.log(`[WCWorker][${tienda.nombre}] ${new Date().toISOString()} - Iniciando sync...`);
     await syncPendingProducts(tienda);
-    console.log(`[WCWorker][${tienda.nombre}] Sync completado.`);
+ /*    console.log(`[WCWorker][${tienda.nombre}] Sync completado.`); */
   } catch (err) {
     console.error(`[WCWorker][${tienda.nombre}] Error inesperado:`, err);
   } finally {
@@ -33,6 +32,5 @@ export async function startWCWorkers(): Promise<void> {
   for (const tienda of tiendas) {
     tick(tienda);
     setInterval(() => tick(tienda), 60_000);
-    console.log(`[WCWorker][${tienda.nombre}] Worker iniciado.`);
   }
 }

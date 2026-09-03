@@ -23,6 +23,6 @@ export async function startCsvWatchers(): Promise<void> {
       enqueueFile(filePath, tienda);
     });
 
-    console.log(`[CsvWatcher][${tienda.nombre}] Watching: ${tienda.csv_watch_dir}`);
+   /*  console.log(`[CsvWatcher][${tienda.nombre}] Watching: ${tienda.csv_watch_dir}`); */
   }
 }
