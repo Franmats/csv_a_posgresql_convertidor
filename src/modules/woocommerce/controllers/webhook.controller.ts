@@ -9,7 +9,6 @@ function verifyWebhook(req: Request, secret: string): boolean {
   const signature = req.headers['x-wc-webhook-signature'] as string;
   if (!signature) return false;
 
-  // Con express.raw el body llega como Buffer
   const payload = Buffer.isBuffer(req.body)
     ? req.body.toString('utf8')
     : JSON.stringify(req.body);
@@ -18,6 +17,15 @@ function verifyWebhook(req: Request, secret: string): boolean {
     .createHmac('sha256', secret)
     .update(payload)
     .digest('base64');
+
+  // --- LOGS DE DIAGNÓSTICO ---
+  console.log('--- DEBUG WEBHOOK ---');
+  console.log('1. Es Buffer?:', Buffer.isBuffer(req.body));
+  console.log('2. Payload evaluado:', JSON.stringify(payload));
+  console.log('3. Hash calculado en API:', hash);
+  console.log('4. Firma que mandó Postman:', signature);
+  console.log('5. Secreto usado:', secret);
+  console.log('---------------------');
 
   return hash === signature;
 }
