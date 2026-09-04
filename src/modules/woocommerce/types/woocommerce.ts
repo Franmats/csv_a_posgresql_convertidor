@@ -45,6 +45,7 @@ export interface WCOrder {
   payment_method_title: string;
   total: string;
   discount_total: string;
+  date_created: string;
   billing: {
     first_name: string;
     last_name: string;

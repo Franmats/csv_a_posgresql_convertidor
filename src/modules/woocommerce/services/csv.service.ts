@@ -20,18 +20,20 @@ function toRow(values: (string | number | null | undefined)[]): string {
   return values.map(escapeCsv).join(',');
 }
 
-export function generateOrderCsvs(order: WCOrder, tienda: Tienda): void {
+export function generateOrderCsvs(order: WCOrder, tienda: Tienda, suffix?: string): void {
   const dir = tienda.pedidos_dir;
   ensureDir(dir);
 
   const dni = order.meta_data?.find(m => m.key === 'billing_dni')?.value ?? '';
+  const fileSuffix = suffix ? `_${suffix}` : '';
+
 
   // ── Pedido principal ──────────────────────────────────────
-  const pedidoPath = path.join(dir, `pedido_${order.number}.csv`);
+  const pedidoPath = path.join(dir, `pedido_${order.number}${fileSuffix}.csv`);
   const pedidoHeaders = [
     'numero_pedido', 'estado', 'medio_pago', 'nombre', 'email',
-    'dni', 'telefono', 'direccion', 'ciudad', 'provincia',
-    'codigo_postal', 'descuento', 'total',
+  'dni', 'telefono', 'direccion', 'ciudad', 'provincia',
+  'codigo_postal', 'descuento', 'total',
   ];
 
   const pedidoRow = toRow([
@@ -53,7 +55,7 @@ export function generateOrderCsvs(order: WCOrder, tienda: Tienda): void {
   fs.writeFileSync(pedidoPath, [pedidoHeaders.join(','), pedidoRow].join('\n'), 'utf8');
 
   // ── Items ─────────────────────────────────────────────────
-  const itemsPath = path.join(dir, `pedido_${order.number}_items.csv`);
+  const itemsPath = path.join(dir, `pedido_${order.number}${fileSuffix}_items.csv`);
   const itemsHeaders = ['numero_pedido', 'sku', 'nombre', 'cantidad', 'precio_unitario', 'subtotal'];
 
   const itemsRows = order.line_items.map(item =>

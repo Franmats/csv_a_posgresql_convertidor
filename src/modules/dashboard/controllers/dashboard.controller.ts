@@ -4,23 +4,24 @@ import { pool } from '../../../config/db';
 export async function getStatus(req: Request, res: Response): Promise<void> {
   try {
     const { rows: tiendas } = await pool.query(`
-      SELECT
-        t.id,
-        t.nombre,
-        t.activo,
-        COUNT(DISTINCT p.id) FILTER (WHERE p.activo = TRUE) as productos_activos,
-        COUNT(DISTINCT wp.id) FILTER (WHERE wp.sync_status = 'error') as productos_error,
-        COUNT(DISTINCT wp.id) FILTER (WHERE wp.sync_status = 'pending') as productos_pending,
-        COUNT(DISTINCT wo.id) as total_pedidos,
-        COUNT(DISTINCT wo.id) FILTER (WHERE wo.invoiced = FALSE) as pedidos_sin_facturar,
-        MAX(wp.last_synced_at) as ultimo_sync
-      FROM tiendas t
-      LEFT JOIN productos p ON p.tienda_id = t.id
-      LEFT JOIN woocommerce_products wp ON wp.tienda_id = t.id
-      LEFT JOIN woocommerce_orders wo ON wo.tienda_id = t.id
-      GROUP BY t.id, t.nombre, t.activo
-      ORDER BY t.id
-    `);
+  SELECT
+    t.id,
+    t.nombre,
+    t.activo,
+    t.orders_last_check,                    -- ← agregar
+    COUNT(DISTINCT p.id) FILTER (WHERE p.activo = TRUE) as productos_activos,
+    COUNT(DISTINCT wp.id) FILTER (WHERE wp.sync_status = 'error') as productos_error,
+    COUNT(DISTINCT wp.id) FILTER (WHERE wp.sync_status = 'pending') as productos_pending,
+    COUNT(DISTINCT wo.id) as total_pedidos,
+    COUNT(DISTINCT wo.id) FILTER (WHERE wo.invoiced = FALSE) as pedidos_sin_facturar,
+    MAX(wp.last_synced_at) as ultimo_sync
+  FROM tiendas t
+  LEFT JOIN productos p ON p.tienda_id = t.id
+  LEFT JOIN woocommerce_products wp ON wp.tienda_id = t.id
+  LEFT JOIN woocommerce_orders wo ON wo.tienda_id = t.id
+  GROUP BY t.id, t.nombre, t.activo, t.orders_last_check
+  ORDER BY t.id
+`);
 
     res.json({ tiendas });
   } catch (err) {

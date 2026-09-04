@@ -9,7 +9,7 @@ import { testConnection } from './config/db';
 import { Tienda } from './types/tienda';
 import { startCsvWatchers } from './modules/csvwatcher/index';
 import { startWCWorkers } from './modules/woocommerce/workers/woocommerce.worker';
-import { registerWebhookRoutes } from './modules/woocommerce/routes/webhook.routes';
+import { startOrdersWorkers } from './modules/woocommerce/workers/orders.worker';
 import { setupDashboard } from './modules/dashboard/index';
 import cookieParser from 'cookie-parser';
 
@@ -54,10 +54,7 @@ app.use('/api/woocommerce', express.raw({ type: 'application/json' }));
     console.log(`[Imagenes] Ruta registrada: /api/imagenes/${tienda.id} → ${tienda.images_dir}`);
   }
 
-  // ── Webhooks por tienda ───────────────────────────────────
-  const router = Router();
-  await registerWebhookRoutes(router);
-  app.use(router);
+
 app.use(cookieParser());
 
   app.get('/', (req, res) => res.send('Sistema activo'));
@@ -67,6 +64,7 @@ app.use(cookieParser());
   // ── Arrancar módulos ──────────────────────────────────────
   await startCsvWatchers();
   await startWCWorkers();
+  await startOrdersWorkers();
 setupDashboard(app);
   app.listen(config.port, () => {
     console.log(`Servidor corriendo en http://localhost:${config.port}`);

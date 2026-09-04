@@ -500,9 +500,10 @@ async function loadStatus() {
           <span class="metric-label">Sin facturar</span>
         </div>
       </div>
-      <div class="tienda-card-footer">
-        Último sync: ${t.ultimo_sync ? new Date(t.ultimo_sync).toLocaleString('es-AR') : 'Nunca'}
-      </div>
+     <div class="tienda-card-footer">
+  Último sync productos: ${t.ultimo_sync ? new Date(t.ultimo_sync).toLocaleString('es-AR') : 'Nunca'}<br>
+  Último check pedidos: ${t.orders_last_check ? new Date(t.orders_last_check).toLocaleString('es-AR') : 'Nunca'}
+</div>
     </div>
   `).join('');
 }

@@ -1,0 +1,2 @@
+numero_pedido,estado,medio_pago,nombre,email,dni,telefono,direccion,ciudad,provincia,codigo_postal,descuento,total
+2723,processing,Transferencia bancaria directa,Franco Cuenca,francomats424@gmail.com,,,niun,lujan,M,5507,0.00,15400.00
