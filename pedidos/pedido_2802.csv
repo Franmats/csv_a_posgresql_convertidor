@@ -1,0 +1,2 @@
+numero_pedido,estado,medio_pago,nombre,email,dni,telefono,direccion,ciudad,provincia,codigo_postal,descuento,total,metodo_envio,costo_envio,lugar_retiro
+2802,on-hold,Transferencia bancaria directa,Franco Cuenca,francomats424@gmail.com,,,niun,lujan,M,5507,0.00,7700.00,Retiro en sucursal (Luján de Cuyo),0.00,Luján de Cuyo

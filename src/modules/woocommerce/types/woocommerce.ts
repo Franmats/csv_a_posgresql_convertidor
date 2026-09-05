@@ -58,8 +58,13 @@ export interface WCOrder {
   };
   line_items: WCLineItem[];
   meta_data: WCMeta[];
+  shipping_lines: WCShippingLine[];
 }
-
+export interface WCShippingLine {
+  method_title: string;
+  total: string;
+  meta_data: WCMeta[];
+}
 export interface WCLineItem {
   id: number;
   name: string;

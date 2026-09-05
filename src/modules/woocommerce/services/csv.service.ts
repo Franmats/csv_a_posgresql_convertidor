@@ -22,6 +22,10 @@ function toRow(values: (string | number | null | undefined)[]): string {
 
 export function generateOrderCsvs(order: WCOrder, tienda: Tienda, suffix?: string): void {
   const dir = tienda.pedidos_dir;
+  const envio = order.shipping_lines?.[0]?.method_title ?? '';
+const costo_envio = order.shipping_lines?.[0]?.total ?? '0';
+const lugar_retiro = order.shipping_lines?.[0]?.meta_data
+  ?.find(m => m.key === 'pickup_location')?.value ?? '';
   ensureDir(dir);
 
   const dni = order.meta_data?.find(m => m.key === 'billing_dni')?.value ?? '';
@@ -34,6 +38,7 @@ export function generateOrderCsvs(order: WCOrder, tienda: Tienda, suffix?: strin
     'numero_pedido', 'estado', 'medio_pago', 'nombre', 'email',
   'dni', 'telefono', 'direccion', 'ciudad', 'provincia',
   'codigo_postal', 'descuento', 'total',
+  'metodo_envio', 'costo_envio', 'lugar_retiro',
   ];
 
   const pedidoRow = toRow([
@@ -50,6 +55,9 @@ export function generateOrderCsvs(order: WCOrder, tienda: Tienda, suffix?: strin
     order.billing?.postcode,
     order.discount_total,
     order.total,
+    envio,         
+  costo_envio,   
+  lugar_retiro,
   ]);
 
   fs.writeFileSync(pedidoPath, [pedidoHeaders.join(','), pedidoRow].join('\n'), 'utf8');

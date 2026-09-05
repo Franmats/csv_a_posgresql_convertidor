@@ -172,10 +172,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
     WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id IS NULL
   `, [tienda.id, producto.codigo]);
 
-  const imagePath = `${tienda.images_dir}/${producto.codigo}.jpg`;
-  const imagen = fs.existsSync(imagePath)
-    ? `${process.env.API_URL}/api/imagenes/${tienda.id}/${producto.codigo}.jpg`
-    : null;
+
 
   const categoryId = producto.rubro
     ? await resolveCategoryId(tienda, producto.rubro)
@@ -190,7 +187,7 @@ async function syncSimple(tienda: Tienda, producto: ProductoRow): Promise<void> 
           codigo: producto.codigo,
           nombre: producto.nombre,
           descripcion: producto.descripcion,
-          imagen,
+          imagen:null,
           precio: variante.precio,
           precio_descuento: variante.precio_descuento,
           stock: variante.stock,
@@ -303,10 +300,7 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
     WHERE tienda_id = $1 AND producto_codigo = $2 AND variante_id IS NULL
   `, [tienda.id, producto.codigo]);
 
-  const imagePath = `${tienda.images_dir}/${producto.codigo}.jpg`;
-  const imagen = fs.existsSync(imagePath)
-    ? `${process.env.API_URL}/api/imagenes/${tienda.id}/${producto.codigo}.jpg`
-    : null;
+
 
   const categoryId = producto.rubro
     ? await resolveCategoryId(tienda, producto.rubro)
@@ -330,7 +324,7 @@ async function syncVariable(tienda: Tienda, producto: ProductoRow): Promise<void
       codigo: producto.codigo,
       nombre: producto.nombre,
       descripcion: producto.descripcion,
-      imagen,
+      imagen:null,
       atributos,
       category_id: categoryId,
     });
