@@ -102,10 +102,24 @@ async function tick(tienda: Tienda): Promise<void> {
     }
 
   } catch (err) {
-    console.error(`[OrdersWorker][${tienda.nombre}] Error:`, err);
-  } finally {
-    runningMap.set(tienda.id, false);
+  const message = err instanceof Error ? err.message : 'Error desconocido';
+
+  // 401 — credenciales inválidas o sin permisos
+  if (message.includes('401')) {
+    console.warn(`[OrdersWorker][${tienda.nombre}] Sin acceso a pedidos — verificar credenciales WC.`);
+    return;
   }
+
+  // 404 — tienda no encontrada
+  if (message.includes('404')) {
+    console.warn(`[OrdersWorker][${tienda.nombre}] Tienda no encontrada en WC.`);
+    return;
+  }
+
+  console.error(`[OrdersWorker][${tienda.nombre}] Error:`, message);
+} finally {
+  runningMap.set(tienda.id, false);
+}
 }
 
 export async function startOrdersWorkers(): Promise<void> {
