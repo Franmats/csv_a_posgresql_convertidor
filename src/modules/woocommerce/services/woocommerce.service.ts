@@ -62,23 +62,28 @@ export async function createSimpleProduct(tienda: Tienda, data: {
   const product: WCProduct = await res.json();
   return { woocommerce_id: product.id };
 }
-export async function updateSimpleProduct(tienda: Tienda,
+export async function updateSimpleProduct(
+  tienda: Tienda,
   woocommerce_id: number,
   data: {
     precio: number;
     precio_descuento: number | null;
     stock: number;
-    category_id: number | null;  // ← nuevo
+    category_id: number | null;
+    nombre: string;
+    descripcion: string | null;
   }
 ): Promise<void> {
   const res = await fetch(`${getBaseUrl(tienda)}/products/${woocommerce_id}`, {
     method: 'PUT',
     headers: getHeaders(tienda),
     body: JSON.stringify({
+      name: data.nombre,
+      description: data.descripcion ?? '',
       regular_price: data.precio.toString(),
       sale_price: data.precio_descuento?.toString() ?? '',
       stock_quantity: data.stock,
-      ...(data.category_id ? { categories: [{ id: data.category_id }] } : {}),  // ← nuevo
+      ...(data.category_id ? { categories: [{ id: data.category_id }] } : {}),
     }),
   });
 
@@ -87,7 +92,18 @@ export async function updateSimpleProduct(tienda: Tienda,
     throw new Error(`WC updateSimpleProduct error: ${res.status} - ${err}`);
   }
 }
+export async function updateOrderStatus(tienda: Tienda, order_id: number, status: string): Promise<void> {
+  const res = await fetch(`${getBaseUrl(tienda)}/orders/${order_id}`, {
+    method: 'PUT',
+    headers: getHeaders(tienda),
+    body: JSON.stringify({ status }),
+  });
 
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WC updateOrderStatus error: ${res.status} - ${err}`);
+  }
+}
 // ─── Productos variables ──────────────────────────────────────
 
 export async function createVariableProduct(tienda: Tienda, data: {
@@ -274,4 +290,44 @@ export async function createCategory(tienda: Tienda, nombre: string): Promise<nu
 
   const category = await res.json();
   return category.id;
+}
+
+export async function uploadProductImage(
+  tienda: Tienda,
+  woocommerce_id: number,
+  base64: string,
+  mimeType: string,
+  fileName: string
+): Promise<void> {
+  // Primero subimos la imagen a la Media Library de WordPress
+  const mediaRes = await fetch(`${tienda.wc_url}/wp-json/wp/v2/media`, {
+    method: 'POST',
+    headers: {
+      ...getHeaders(tienda),
+      'Content-Disposition': `attachment; filename="${fileName}"`,
+      'Content-Type': mimeType,
+    },
+    body: Buffer.from(base64, 'base64'),
+  });
+
+  if (!mediaRes.ok) {
+    const err = await mediaRes.text();
+    throw new Error(`WP uploadMedia error: ${mediaRes.status} - ${err}`);
+  }
+
+  const media = await mediaRes.json();
+
+  // Luego asignamos la imagen al producto
+  const productRes = await fetch(`${getBaseUrl(tienda)}/products/${woocommerce_id}`, {
+    method: 'PUT',
+    headers: getHeaders(tienda),
+    body: JSON.stringify({
+      images: [{ id: media.id }],
+    }),
+  });
+
+  if (!productRes.ok) {
+    const err = await productRes.text();
+    throw new Error(`WC updateProductImage error: ${productRes.status} - ${err}`);
+  }
 }

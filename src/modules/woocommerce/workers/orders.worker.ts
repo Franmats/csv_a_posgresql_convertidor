@@ -50,7 +50,7 @@ async function tick(tienda: Tienda): Promise<void> {
 
     if (ordersToProcess.length === 0) return;
 
-    /* console.log(`[OrdersWorker][${tienda.nombre}] ${ordersToProcess.length} pedidos a procesar.`); */
+    console.log(`[OrdersWorker][${tienda.nombre}] ${ordersToProcess.length} pedidos a procesar.`);
 
     for (const order of ordersToProcess) {
       const { rows: existing } = await pool.query(
