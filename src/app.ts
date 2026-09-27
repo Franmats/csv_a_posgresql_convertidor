@@ -11,6 +11,7 @@ import { startCsvWatchers } from './modules/csvwatcher/index';
 import { startWCWorkers } from './modules/woocommerce/workers/woocommerce.worker';
 import { startOrdersWorkers } from './modules/woocommerce/workers/orders.worker';
 import { setupDashboard } from './modules/dashboard/index';
+import consultaRoutes from './modules/consulta/routes/consulta.routes';
 import cookieParser from 'cookie-parser';
 
 async function bootstrap() {
@@ -58,7 +59,7 @@ app.use('/api/woocommerce', express.raw({ type: 'application/json' }));
 app.use(cookieParser());
 
   app.get('/', (req, res) => res.send('Sistema activo'));
-
+app.use('/api/consulta', consultaRoutes);
   await testConnection();
 
   // ── Arrancar módulos ──────────────────────────────────────

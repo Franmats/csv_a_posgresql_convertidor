@@ -24,7 +24,7 @@ async function tick(tienda: Tienda): Promise<void> {
 
 export async function startWCWorkers(): Promise<void> {
   const { rows: tiendas } = await pool.query<Tienda>(
-    'SELECT * FROM tiendas WHERE activo = TRUE'
+    'SELECT * FROM tiendas WHERE activo = TRUE AND tiene_woocommerce = TRUE'
   );
 
   console.log(`[WCWorker] ${tiendas.length} tiendas activas encontradas.`);

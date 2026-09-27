@@ -21,6 +21,7 @@ export interface Config {
   dashboard_password: string;
   dashboard_secret: string;
   wc_webhook_secret: string;
+  consulta_api_key: string;
 }
 
 const config: Config = {
@@ -34,7 +35,8 @@ const config: Config = {
   api_url: process.env.API_URL ?? '',
   dashboard_password: process.env.DASHBOARD_PASSWORD ?? 'admin',
 dashboard_secret: process.env.DASHBOARD_SECRET ?? 'dashboard_secret',
-wc_webhook_secret: process.env.WC_WEBHOOK_SECRET ?? ''
+wc_webhook_secret: process.env.WC_WEBHOOK_SECRET ?? '',
+consulta_api_key: process.env.CONSULTA_API_KEY ?? '',
 };
 
 export default config;

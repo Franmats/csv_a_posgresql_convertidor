@@ -8,6 +8,7 @@ export interface Tienda {
   csv_watch_dir: string;
   pedidos_dir: string;
   images_dir: string;
+  tiene_woocommerce: boolean;
+  orders_last_check: Date | null;
   activo: boolean;
-  rubro: string | null;
 }

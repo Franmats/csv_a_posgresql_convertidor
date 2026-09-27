@@ -124,7 +124,7 @@ async function tick(tienda: Tienda): Promise<void> {
 
 export async function startOrdersWorkers(): Promise<void> {
   const { rows: tiendas } = await pool.query<Tienda>(
-    'SELECT * FROM tiendas WHERE activo = TRUE'
+    'SELECT * FROM tiendas WHERE activo = TRUE AND tiene_woocommerce = TRUE'
   );
 
   for (const tienda of tiendas) {
