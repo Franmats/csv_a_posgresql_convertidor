@@ -33,7 +33,7 @@ const lugar_retiro = order.shipping_lines?.[0]?.meta_data
 
 
   // ── Pedido principal ──────────────────────────────────────
-  const pedidoPath = path.join(dir, `pedido_${order.number}${fileSuffix}.csv`);
+  const pedidoPath = path.join(dir, `cabecera_${order.number}.csv`);
   const pedidoHeaders = [
     'numero_pedido', 'estado', 'medio_pago', 'nombre', 'email',
   'dni', 'telefono', 'direccion', 'ciudad', 'provincia',
@@ -63,7 +63,7 @@ const lugar_retiro = order.shipping_lines?.[0]?.meta_data
   fs.writeFileSync(pedidoPath, [pedidoHeaders.join(','), pedidoRow].join('\n'), 'utf8');
 
   // ── Items ─────────────────────────────────────────────────
-  const itemsPath = path.join(dir, `pedido_${order.number}${fileSuffix}_items.csv`);
+  const itemsPath = path.join(dir, `articulos_${order.number}.csv`);
   const itemsHeaders = ['numero_pedido', 'sku', 'nombre', 'cantidad', 'precio_unitario', 'subtotal'];
 
   const itemsRows = order.line_items.map(item =>
