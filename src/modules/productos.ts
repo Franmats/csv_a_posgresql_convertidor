@@ -10,6 +10,16 @@ import { updateOrderStatus } from './woocommerce/services/woocommerce.service';
 // ─── BULK ARTICULOS ───────────────────────────────────────────
 
 export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<void> {
+  const cols = detectColumns(filePath);
+
+  if (cols !== 7 && cols !== 8) {
+    throw new Error(`Formato inválido: ${cols} columnas (se esperan 7 u 8).`);
+  }
+
+  const copyColumns = cols === 8
+    ? 'codigo, nombre, descripcion, codigo_barras, precio, precio_descuento, stock, rubro'
+    : 'codigo, nombre, codigo_barras, precio, precio_descuento, stock, rubro';
+
   const client = await pool.connect();
 
   try {
@@ -29,7 +39,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
     `);
 
     const copyStream = client.query(
-      copyFrom(`COPY tmp_articulos FROM STDIN WITH (FORMAT csv)`)
+      copyFrom(`COPY tmp_articulos(${copyColumns}) FROM STDIN WITH (FORMAT csv)`)
     );
 
     const fileStream = fs.createReadStream(filePath);
@@ -39,15 +49,17 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
 
     await pipeline(convertStream, copyStream);
 
-    // 1. Upsert productos base — todos simple
+    // 1. Upsert productos
     await client.query(`
       INSERT INTO productos (tienda_id, codigo, nombre, descripcion, tipo, rubro, activo)
-      SELECT $1, codigo, nombre,
+      SELECT DISTINCT ON (codigo)
+        $1, codigo, nombre,
         NULLIF(descripcion, ''),
         'simple',
         NULLIF(rubro, ''),
         TRUE
       FROM tmp_articulos
+      ORDER BY codigo
       ON CONFLICT (tienda_id, codigo) DO UPDATE SET
         nombre      = EXCLUDED.nombre,
         descripcion = EXCLUDED.descripcion,
@@ -55,10 +67,10 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
         activo      = TRUE,
         updated_at  = CASE
           WHEN
-            productos.nombre        IS DISTINCT FROM EXCLUDED.nombre OR
-            productos.descripcion   IS DISTINCT FROM EXCLUDED.descripcion OR
-            productos.rubro         IS DISTINCT FROM EXCLUDED.rubro OR
-            productos.activo        IS DISTINCT FROM TRUE
+            productos.nombre      IS DISTINCT FROM EXCLUDED.nombre OR
+            productos.descripcion IS DISTINCT FROM EXCLUDED.descripcion OR
+            productos.rubro       IS DISTINCT FROM EXCLUDED.rubro OR
+            productos.activo      IS DISTINCT FROM TRUE
           THEN NOW()
           ELSE productos.updated_at
         END
@@ -87,10 +99,8 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
     await client.query(`
       INSERT INTO producto_variantes
         (tienda_id, producto_codigo, sku, codigo_barras, atributos, precio, precio_descuento, stock, activo)
-      SELECT
-        $1,
-        codigo,
-        codigo,                                    -- sku = codigo
+      SELECT DISTINCT ON (codigo)
+        $1, codigo, codigo,
         NULLIF(codigo_barras, ''),
         '{}'::jsonb,
         precio::numeric,
@@ -101,6 +111,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
         TRUE
       FROM tmp_articulos
       WHERE precio != '' AND stock != ''
+      ORDER BY codigo
       ON CONFLICT (tienda_id, producto_codigo, sku) WHERE sku IS NOT NULL DO UPDATE SET
         codigo_barras    = EXCLUDED.codigo_barras,
         precio           = EXCLUDED.precio,
@@ -120,7 +131,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
     `, [tienda.id]);
 
     await client.query('COMMIT');
-    console.log(`[CsvWatcher][${tienda.nombre}] Bulk articulos completado.`);
+    console.log(`[CsvWatcher][${tienda.nombre}] Bulk articulos completado (${cols} columnas).`);
 
   } catch (err) {
     await client.query('ROLLBACK');
@@ -129,7 +140,22 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
     client.release();
   }
 }
+function detectColumns(filePath: string): number {
+  const fd = fs.openSync(filePath, 'r');
+  const buf = Buffer.alloc(4096);
+  const bytes = fs.readSync(fd, buf, 0, 4096, 0);
+  fs.closeSync(fd);
 
+  const firstLine = iconv.decode(buf.subarray(0, bytes), 'win1252').split(/\r?\n/)[0];
+
+  let cols = 1;
+  let inQuotes = false;
+  for (const ch of firstLine) {
+    if (ch === '"') inQuotes = !inQuotes;
+    else if (ch === ',' && !inQuotes) cols++;
+  }
+  return cols;
+}
 // ─── UPDATE INDIVIDUAL ────────────────────────────────────────
 
 export async function processProductoFile(filePath: string, tienda: Tienda): Promise<void> {
