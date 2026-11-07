@@ -9,11 +9,8 @@ function ensureDir(dir: string): void {
 
 function escapeCsv(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
-  const str = value.toString();
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
-  }
-  return str;
+  // Reemplaza comas por espacios y elimina comillas para asegurar una estructura fija por comas
+  return value.toString().replace(/,/g, ' ').replace(/"/g, '').trim();
 }
 
 function toRow(values: (string | number | null | undefined)[]): string {
