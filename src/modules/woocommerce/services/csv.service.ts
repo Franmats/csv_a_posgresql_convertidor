@@ -9,7 +9,7 @@ function ensureDir(dir: string): void {
 
 function escapeCsv(value: string | number | null | undefined): string {
   if (value === null || value === undefined) return '';
-  // Reemplaza comas por espacios y elimina comillas para asegurar una estructura fija por comas
+  // Reemplaza comas por espacios y elimina comillas para no romper el formato CSV
   return value.toString().replace(/,/g, ' ').replace(/"/g, '').trim();
 }
 
@@ -20,7 +20,7 @@ function toRow(values: (string | number | null | undefined)[]): string {
 export function generateOrderCsvs(order: WCOrder, tienda: Tienda, suffix?: string): void {
   const dir = tienda.pedidos_dir;
   const envio = order.shipping_lines?.[0]?.method_title ?? '';
-  const costo_envio = order.shipping_lines?.[0]?.total ?? '0';
+  const costo_envio = order.shipping_lines?.[0]?.total ?? '';
   const lugar_retiro = order.shipping_lines?.[0]?.meta_data
     ?.find(m => m.key === 'pickup_location')?.value ?? '';
   ensureDir(dir);
