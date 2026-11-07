@@ -14,7 +14,7 @@ async function tick(tienda: Tienda): Promise<void> {
 
   try {
     await syncPendingProducts(tienda);
- /*    console.log(`[WCWorker][${tienda.nombre}] Sync completado.`); */
+     console.log(`[WCWorker][${tienda.nombre}] Sync completado.`);
   } catch (err) {
     console.error(`[WCWorker][${tienda.nombre}] Error inesperado:`, err);
   } finally {
