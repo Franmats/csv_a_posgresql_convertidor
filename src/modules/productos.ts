@@ -49,6 +49,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
 
     await pipeline(convertStream, copyStream);
 
+
     // 1. Upsert productos
     await client.query(`
       INSERT INTO productos (tienda_id, codigo, nombre, descripcion, tipo, rubro, activo)
@@ -76,26 +77,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
         END
     `, [tienda.id]);
 
-    // 2. Desactivar productos que ya no están en el CSV
-    await client.query(`
-      UPDATE productos SET activo = FALSE, updated_at = NOW()
-      WHERE tienda_id = $1
-        AND codigo NOT IN (SELECT codigo FROM tmp_articulos)
-        AND activo = TRUE
-    `, [tienda.id]);
-
-    // 3. Desactivar variantes de productos desactivados
-    await client.query(`
-      UPDATE producto_variantes SET activo = FALSE, updated_at = NOW()
-      WHERE tienda_id = $1
-        AND producto_codigo IN (
-          SELECT codigo FROM productos
-          WHERE tienda_id = $1 AND activo = FALSE
-        )
-        AND activo = TRUE
-    `, [tienda.id]);
-
-    // 4. Upsert variante única por producto
+    // 2. Upsert variante única por producto
     await client.query(`
       INSERT INTO producto_variantes
         (tienda_id, producto_codigo, sku, codigo_barras, atributos, precio, precio_descuento, stock, activo)
@@ -129,6 +111,7 @@ export async function bulkArticulos(filePath: string, tienda: Tienda): Promise<v
           ELSE producto_variantes.updated_at
         END
     `, [tienda.id]);
+
 
     await client.query('COMMIT');
     console.log(`[CsvWatcher][${tienda.nombre}] Bulk articulos completado (${cols} columnas).`);
