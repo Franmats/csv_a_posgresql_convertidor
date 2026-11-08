@@ -331,3 +331,19 @@ export async function uploadProductImage(
     throw new Error(`WC updateProductImage error: ${productRes.status} - ${err}`);
   }
 }
+export async function getProductBySku(tienda: Tienda, sku: string): Promise<WCProduct | null> {
+  const res = await fetch(
+    `${getBaseUrl(tienda)}/products?sku=${encodeURIComponent(sku)}`,
+    { headers: getHeaders(tienda) }
+  );
+
+  if (!res.ok) {
+    const err = await res.text();
+    throw new Error(`WC getProductBySku error: ${res.status} - ${err}`);
+  }
+
+  const products: WCProduct[] = await res.json();
+
+  // WooCommerce retorna un arreglo con los productos que coinciden con el SKU
+  return products.length > 0 ? products[0] : null;
+}
